@@ -1,9 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
 import cloudscraper
+import urllib.parse
 
 scraper = cloudscraper.CloudScraper()
-#meG = scraper.get("https://www.webcamtaxi.com/en/search.html?searchword=germany&ordering=newest&searchphrase=all&limit=0")
 
 def get_links(res):
     al = []
@@ -28,12 +28,12 @@ def get_img(res):
     print("-"*50)
     return al
 
-city = input("Enter location: ").replace(" ", "")
+city = urllib.parse.quote_plus(input("Enter location (e.g. city): "))
+print(city)
 
 # 1
 res = scraper.get(f"https://www.webcamtaxi.com/en/search.html?searchword={city}&ordering=newest&searchphrase=all&limit=0")
-#get_links(res)
-#print(res.text)
+
 # 2
 res2 = requests.get(f"https://worldcam.live/en/search?q={city}")
 al = get_links(res2)
@@ -63,18 +63,27 @@ for item in al:
 
 # 4
 print("-"*50)
-res = requests.get("https://searchapi.earthcam.com/search.php/?term=germany").json()
+res = requests.get(f"https://searchapi.earthcam.com/search.php/?term={city}").json()
 for ite in res["item_data"]:
-    print(ite["db_url"])
+    if str(ite["db_url"]).startswith("http"):
+        print(ite["db_url"])
+    else:
+        pass
 
 
 # 5
 res5 = requests.get(f"https://www.globocam.de/webcams/suche?q={city}")
 al = get_links(res5)
-#print(al)
+badd = ["https://www.globocam.de/webcams/melden",
+"https://www.globocam.de/webcams/suche",
+"https://www.globocam.de/webcams/search/reset",
+f"https://www.globocam.de/webcams/suche?page=2&search={city}"]
 for item in al:
     if item.startswith("/webcams/"):
-        print("https://www.globocam.de" + item)
+        if "https://www.globocam.de" + item in badd:
+            pass
+        else:
+            print("https://www.globocam.de" + item)
 
 # 6
 res6 = requests.get(f"http://www.opentopia.com/search.php?q={city}")
@@ -82,8 +91,25 @@ al = get_img(res6)
 #print(al)
 for item in al:
     if item.startswith("http://images.opentopia.com/cams/"):
-        # http://images.opentopia.com/cams/15373/medium.jpg
-        # http://www.opentopia.com/webcam/15373
         idd = item.split("/")[4]
         print("http://www.opentopia.com/webcam/" + idd)
         pass 
+print("-"*50)
+def get_city(city):
+    headers = {"User-Agent": "Mozilla/5.0 (X11; Linux i686; rv:68.0) Gecko/20100101 Firefox/68.0"}
+    res = requests.get(
+        f"http://insecam.org/en/bycity/{city}", headers=headers
+    )
+    last_page = re.findall(r'pagenavigator\("\?page=", (\d+)', res.text)[0]
+
+    for page in range(int(last_page)):
+        res = requests.get(
+            f"http://www.insecam.org/en/bycity/{city}/?page={page}",
+            headers=headers
+        )
+        find_ip = re.findall(r"http://\d+.\d+.\d+.\d+:\d+", res.text)
+        for ip in find_ip:
+            print(ip)
+get_city(str(city))
+print("-"*50)
+print("[i] Finished...")
